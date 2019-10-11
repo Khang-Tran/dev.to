@@ -2,9 +2,6 @@ class Follow < ApplicationRecord
   extend ActsAsFollower::FollowerLib
   extend ActsAsFollower::FollowScopes
 
-  include StreamRails::Activity
-  as_activity
-
   # NOTE: Follows belong to the "followable" interface, and also to followers
   belongs_to :followable, polymorphic: true
   belongs_to :follower,   polymorphic: true
@@ -21,70 +18,42 @@ class Follow < ApplicationRecord
   }, column_names: {
     ["follows.followable_type = ?", "User"] => "following_users_count",
     ["follows.followable_type = ?", "Organization"] => "following_orgs_count",
-    ["follows.followable_type = ?", "ActsAsTaggableOn::Tag"] => "following_tags_count",
+    ["follows.followable_type = ?", "ActsAsTaggableOn::Tag"] => "following_tags_count"
   }
-  after_save :touch_user
-  after_save :touch_user_followed_at
-  after_create :send_email_notification
-  after_create :create_chat_channel
+  after_save :touch_follower
+  after_create :send_email_notification, :create_chat_channel
   before_destroy :modify_chat_channel_status
 
   validates :followable_id, uniqueness: { scope: %i[followable_type follower_id] }
+  validates :subscription_status, inclusion: { in: %w[all_articles none] }
 
-  def activity_actor
-    follower
-  end
-
-  def activity_notify
-    return if followable.class.name != "User"
-    [StreamNotifier.new(followable.id).notify]
-  end
-
-  def activity_object
-    followable
-  end
-
-  def remove_from_feed
-    super
-    if followable_type == "User"
-      User.find_by(id: followable.id)&.touch(:last_notification_activity)
-    end
+  def self.need_new_follower_notification_for?(followable_type)
+    %w[User Organization].include?(followable_type)
   end
 
   private
 
-  def touch_user
-    follower.touch
+  def touch_follower
+    Follows::TouchFollowerJob.perform_later(id)
   end
-  handle_asynchronously :touch_user
-
-  def touch_user_followed_at
-    follower.touch(:last_followed_at)
-  end
-  handle_asynchronously :touch_user_followed_at
 
   def create_chat_channel
-    if followable_type == "User" && followable.following?(follower)
-      ChatChannel.create_with_users([followable, follower])
-    end
+    return unless followable_type == "User"
+
+    Follows::CreateChatChannelJob.perform_later(id)
   end
-  handle_asynchronously :create_chat_channel
 
   def send_email_notification
-    if followable.class.name == "User" && followable.email.present? && followable.email_follower_notifications
-      return if EmailMessage.where(user_id: followable.id).
-          where("sent_at > ?", rand(15..35).hours.ago).
-          where("subject LIKE ?", "%followed you on dev.to%").any?
-      NotifyMailer.new_follower_email(self).deliver
-    end
+    return unless followable.class.name == "User" && followable.email?
+
+    Follows::SendEmailNotificationJob.perform_later(id)
   end
-  handle_asynchronously :send_email_notification
 
   def modify_chat_channel_status
-    if followable_type == "User" && followable.following?(follower)
-      follower.chat_channels.
-        where("slug LIKE ? OR slug like ?", "%/#{followable.username}%", "%#{followable.username}/%").
-        first.update(status: "inactive")
-    end
+    return unless followable_type == "User" && followable.following?(follower)
+
+    channel = follower.chat_channels.
+      find_by("slug LIKE ? OR slug like ?", "%/#{followable.username}%", "%#{followable.username}/%")
+    channel&.update(status: "inactive")
   end
 end

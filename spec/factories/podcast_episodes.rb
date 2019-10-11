@@ -4,8 +4,9 @@ FactoryBot.define do
     title         { rand(30) }
     media_url     { Faker::Internet.url }
     website_url   { Faker::Internet.url }
-    body          { Faker::Hipster.paragraph(1) }
+    body          { Faker::Hipster.paragraph(sentence_count: 1) }
     slug          { "slug-#{rand(10_000)}" }
     guid          { "guid-#{rand(10_000)}" }
+    podcast
   end
 end

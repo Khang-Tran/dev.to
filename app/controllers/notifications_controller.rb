@@ -1,83 +1,79 @@
 class NotificationsController < ApplicationController
-  # No authorization required for entirely public controller
-  before_action :create_enricher
-
+  # No authorization required because we provide authentication on notifications page
   def index
-    if user_signed_in?
-      @notifications_index = true
-      @user = if params[:username] && current_user.admin?
-                User.find_by_username(params[:username])
-              else
-                current_user
-              end
-      @activities = cached_activities
-      @last_user_reaction = @user.reactions.pluck(:id).last
-      @last_user_comment = @user.comments.pluck(:id).last
+    return unless user_signed_in?
+
+    @notifications_index = true
+    @user = user_to_view
+
+    @initial_page_size = 8
+
+    # NOTE: this controller is using offset based pagination by assuming that
+    # the id of the last notification also corresponds to the newest `notified_at`
+    # this might not be forever true but it's good enough for now
+    if params[:offset]
+      num = 30
+      notified_at_offset = Notification.find(params[:offset])&.notified_at
+    else
+      num = @initial_page_size
     end
+
+    @notifications = if (params[:org_id].present? || params[:filter] == "org") && allowed_user?
+                       organization_notifications
+                     elsif params[:org_id].blank? && params[:filter].present?
+                       filtered_notifications
+                     else
+                       @user.notifications
+                     end
+
+    @notifications = @notifications.includes(:notifiable).without_past_aggregations.order(notified_at: :desc)
+
+    # if offset based pagination is invoked by the frontend code, we filter out all earlier ones
+    @notifications = @notifications.where("notified_at < ?", notified_at_offset) if notified_at_offset
+
+    @notifications = NotificationDecorator.decorate_collection(@notifications.limit(num))
+
+    @last_user_reaction = @user.reactions.last&.id
+    @last_user_comment = @user.comments.last&.id
+
+    @organizations = @user.member_organizations if @user.organizations
+
+    # The first call, the one coming from the browser URL bar will render the "index" view, which renders
+    # the first few notifications. After that the JS frontend code (see `initNotification.js`)
+    # will call this action again by sending the offset id for the last known notifications, the result
+    # will be the partial rendering of only the list of notifications that will be attached to the DOM by JS
+    render partial: "notifications_list" if notified_at_offset
   end
 
   private
 
-  def cached_activities
-    cache_name = "notifications-fetch-#{@user.id}-#{@user.last_notification_activity}"
-    results = Rails.cache.fetch(cache_name, expires_in: 5.hours) do
-      feed_activities
+  def user_to_view
+    if params[:username] && current_user.admin?
+      User.find_by(username: params[:username])
+    else
+      current_user
     end
-    @enricher.enrich_aggregated_activities(results)
   end
 
-  def feed_activities
-    return [] if Rails.env.test?
-    feed = StreamRails.feed_manager.get_notification_feed(@user.id)
-    feed.get(limit: 45)["results"]
+  def filtered_notifications
+    if params[:filter].to_s.casecmp("posts").zero?
+      @user.notifications.for_published_articles
+    elsif params[:filter].to_s.casecmp("comments").zero?
+      @user.notifications.for_comments.or(@user.notifications.for_mentions)
+    end
   end
 
-  def create_enricher
-    @enricher = StreamRails::Enrich.new
+  def organization_notifications
+    org_id = params[:org_id]
+
+    if params[:filter].to_s.casecmp("comments").zero?
+      Notification.for_organization_comments(org_id).or(Notification.for_organization_mentions(org_id))
+    else
+      Notification.for_organization(org_id)
+    end
   end
-end
 
-module StreamRails
-  class Enrich
-    def retrieve_objects(references)
-      Hash[
-        references.map do |model, ids|
-          [model, Hash[construct_query(model, ids).map { |i| [i.id.to_s, i] }]]
-        end
-      ]
-    end
-
-    def construct_query(model, ids)
-      send("get_#{model.downcase}", ids)
-    rescue NoMethodError
-      model.classify.constantize.where(id: ids.keys).to_a
-    end
-
-    private
-
-    def get_user(ids)
-      User.where(id: ids.keys).select(:id, :name, :username, :profile_image).to_a
-    end
-
-    def get_comment(ids)
-      Comment.where(id: ids.keys).
-        select(:id, :id_code, :user_id, :processed_html,
-               :commentable_id, :commentable_type,
-               :updated_at, :ancestry).
-        includes(:user, :commentable).to_a
-    end
-
-    def get_reaction(ids)
-      Reaction.where(id: ids.keys).includes(:reactable, :user).to_a
-    end
-
-    def get_article(ids)
-      Article.where(id: ids.keys).
-        select(:id, :title, :path, :user_id, :updated_at, :cached_tag_list).to_a
-    end
-
-    def get_broadcast(ids)
-      Broadcast.where(id: ids.keys).to_a
-    end
+  def allowed_user?
+    @user.organization_id == params[:org_id] || @user.admin?
   end
 end

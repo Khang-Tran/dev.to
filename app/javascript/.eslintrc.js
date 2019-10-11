@@ -1,6 +1,6 @@
 module.exports = {
   parser: 'babel-eslint',
-  extends: ['airbnb', 'prettier'],
+  extends: ['airbnb', 'prettier', 'plugin:jsx-a11y/recommended'],
   parserOptions: {
     ecmaVersion: 2017,
   },
@@ -13,7 +13,7 @@ module.exports = {
     jest: true,
     browser: true,
   },
-  plugins: ['import'],
+  plugins: ['import', 'jsx-a11y'],
   rules: {
     'import/no-extraneous-dependencies': [
       'error',
@@ -22,9 +22,13 @@ module.exports = {
       },
     ],
     'import/prefer-default-export': 'off',
+    'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
   },
   globals: {
     InstantClick: false,
     filterXSS: false,
+    Pusher: false,
+    algoliasearch: false,
+    ga: false,
   },
 };

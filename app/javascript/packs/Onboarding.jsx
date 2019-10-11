@@ -19,10 +19,10 @@ function isUserSignedIn() {
 }
 
 function renderPage() {
-  import('../src/Onboarding')
-    .then(({ default: Onboarding }) =>
-      render(<Onboarding />, document.getElementById('top-bar')),
-    )
+  import('../onboarding/Onboarding')
+    .then(({ default: Onboarding }) => {
+      render(<Onboarding />, document.getElementById('onboarding-container'));
+    })
     .catch(error => {
       // eslint-disable-next-line no-console
       console.error('Unable to load onboarding', error);
@@ -36,10 +36,7 @@ document.ready.then(
       window.csrfToken = csrfToken;
 
       getUnopenedChannels();
-
-      if (isUserSignedIn() && !currentUser.saw_onboarding) {
-        renderPage();
-      }
+      renderPage();
     })
     .catch(error => {
       // eslint-disable-next-line no-console

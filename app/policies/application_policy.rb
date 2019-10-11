@@ -3,6 +3,7 @@ class ApplicationPolicy
 
   def initialize(user, record)
     raise Pundit::NotAuthorizedError, "You must be logged in" unless user
+
     @user = user
     @record = record
   end
@@ -31,6 +32,10 @@ class ApplicationPolicy
     update?
   end
 
+  def manage?
+    update? && record.published
+  end
+
   def destroy?
     false
   end
@@ -44,6 +49,7 @@ class ApplicationPolicy
 
     def initialize(user, scope)
       raise Pundit::NotAuthorizedError, "must be logged in" unless user
+
       @user = user
       @scope = scope
     end
@@ -53,11 +59,19 @@ class ApplicationPolicy
     end
   end
 
+  def minimal_admin?
+    user.has_role?(:super_admin) || user.has_role?(:admin)
+  end
+
   def user_admin?
     user.has_role?(:super_admin)
   end
 
   def user_is_banned?
     user.banned
+  end
+
+  def user_is_trusted?
+    user.has_role?(:trusted)
   end
 end

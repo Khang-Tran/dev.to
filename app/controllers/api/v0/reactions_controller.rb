@@ -5,7 +5,7 @@ module Api
       def create
         @user = valid_user
         unless @user
-          render json: { message: "invalid_user" }, status: 422
+          render json: { message: "invalid_user" }, status: :unprocessable_entity
           return
         end
         Rails.cache.delete "count_for_reactable-#{params[:reactable_type]}-#{params[:reactable_id]}"
@@ -15,6 +15,8 @@ module Api
           reactable_type: params[:reactable_type],
           category: params[:category] || "like",
         )
+        Notification.send_reaction_notification(@reaction, @reaction.reactable.user)
+        Notification.send_reaction_notification(@reaction, @reaction.reactable.organization) if organization_article?(@reaction)
         render json: { reaction: @reaction.to_json }
       end
 
@@ -22,7 +24,7 @@ module Api
         verify_authenticity_token
         reactable_ids = JSON.parse(params[:articles]).map { |article| article["id"] }
         reactable_ids.each do |article_id|
-          Reaction.delay.create(
+          Reactions::CreateJob.perform_later(
             user_id: current_user.id,
             reactable_id: article_id,
             reactable_type: "Article",
@@ -34,9 +36,13 @@ module Api
       private
 
       def valid_user
-        user = User.find_by_secret(params[:key])
-        user = nil if !user.has_role?(:super_admin)
+        user = User.find_by(secret: params[:key])
+        user = nil unless user.has_role?(:super_admin)
         user
+      end
+
+      def organization_article?(reaction)
+        reaction.reactable_type == "Article" && reaction.reactable.organization_id
       end
     end
   end

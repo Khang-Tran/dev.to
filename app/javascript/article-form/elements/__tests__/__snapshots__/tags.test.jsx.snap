@@ -2,8 +2,12 @@
 
 exports[`<Tags /> only allows 4 tags 1`] = `
 Object {
+  "additionalTags": Array [],
+  "cursorIdx": 0,
+  "prevLen": 0,
   "searchResults": Array [],
   "selectedIndex": -1,
+  "showingRulesForTag": null,
 }
 `;
 
@@ -11,14 +15,16 @@ exports[`<Tags /> renders properly 1`] = `
 <div
   class="articleform__tagswrapper"
 >
-  <textarea
+  <input
+    autoComplete="off"
     class="articleform__tags"
     id="tag-input"
     onBlur={[Function]}
     onFocus={[Function]}
     onInput={[Function]}
     onKeyDown={[Function]}
-    placeholder="tags"
+    placeholder="4 tags max, comma separated, no spaces or special characters"
+    ref={[Function]}
     type="text"
     value=""
   />
@@ -27,20 +33,31 @@ exports[`<Tags /> renders properly 1`] = `
 
 exports[`<Tags /> replaces tag when editing 1`] = `
 Object {
+  "additionalTags": Array [],
+  "cursorIdx": 0,
+  "prevLen": 0,
   "searchResults": Array [],
   "selectedIndex": -1,
+  "showingRulesForTag": null,
 }
 `;
 
 exports[`<Tags /> selects tag when you click on it 1`] = `
 Object {
+  "additionalTags": Array [],
+  "cursorIdx": 0,
+  "prevLen": 0,
   "searchResults": Array [],
   "selectedIndex": -1,
+  "showingRulesForTag": null,
 }
 `;
 
 exports[`<Tags /> shows tags as you search 1`] = `
 Object {
+  "additionalTags": Array [],
+  "cursorIdx": 2,
+  "prevLen": 0,
   "searchResults": Array [
     Object {
       "_highlightResult": Object {
@@ -71,12 +88,16 @@ Object {
       "text_color_hex": "#56c938",
     },
   ],
-  "selectedIndex": -1,
+  "selectedIndex": 0,
+  "showingRulesForTag": null,
 }
 `;
 
 exports[`<Tags /> shows tags when editing 1`] = `
 Object {
+  "additionalTags": Array [],
+  "cursorIdx": 2,
+  "prevLen": 0,
   "searchResults": Array [
     Object {
       "_highlightResult": Object {
@@ -107,6 +128,7 @@ Object {
       "text_color_hex": "#56c938",
     },
   ],
-  "selectedIndex": -1,
+  "selectedIndex": 0,
+  "showingRulesForTag": null,
 }
 `;

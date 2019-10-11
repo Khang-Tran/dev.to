@@ -1,14 +1,15 @@
 class NotificationCounter
-  def initialize(user)
-    @user = user
+  def initialize(receiver)
+    @receiver = receiver
   end
 
   def unread_notification_count
     return 0 if Rails.env.test?
-    StreamRails.feed_manager.get_notification_feed(@user.id).get["unseen"]
+
+    @receiver.notifications.where(read: false).count
   end
 
   def set_to_zero
-    StreamRails.feed_manager.get_notification_feed(@user.id).get(mark_seen: true)
+    @receiver.notifications.where(read: false).update_all(read: true)
   end
 end

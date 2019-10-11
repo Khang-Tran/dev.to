@@ -2,12 +2,12 @@
 require "rails_helper"
 
 RSpec.describe "ArticlesApi", type: :request do
-  let(:user) { create(:user) }
+  let(:user) { create(:user, :super_admin) }
   let(:article) { create(:article) }
 
   before do
     user.update(secret: "TEST_SECRET")
-    user.add_role(:super_admin)
+    sign_in user
   end
 
   describe "POST /api/reactions" do
@@ -23,7 +23,7 @@ RSpec.describe "ArticlesApi", type: :request do
       post "/api/reactions", params: {
         reactable_id: article.id, reactable_type: "Article", category: "like", key: user.secret
       }
-      expect(response).to have_http_status(422)
+      expect(response).to have_http_status(:unprocessable_entity)
     end
   end
 end

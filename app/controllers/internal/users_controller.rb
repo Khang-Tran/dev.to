@@ -3,13 +3,18 @@ class Internal::UsersController < Internal::ApplicationController
 
   def index
     @users = case params[:state]
-             when "mentors"
-               User.where(offering_mentorship: true).page(params[:page]).per(20)
-             when "mentees"
-               User.where(seeking_mentorship: true).page(params[:page]).per(20)
+             when /role\-/
+               User.with_role(params[:state].split("-")[1], :any).page(params[:page]).per(50)
              else
-               User.order("created_at DESC").page(params[:page]).per(20)
+               User.order("created_at DESC").page(params[:page]).per(50)
              end
+    return if params[:search].blank?
+
+    @users = @users.where('users.name ILIKE :search OR
+      users.username ILIKE :search OR
+      users.github_username ILIKE :search OR
+      users.email ILIKE :search OR
+      users.twitter_username ILIKE :search', search: "%#{params[:search].strip}%")
   end
 
   def edit
@@ -18,135 +23,132 @@ class Internal::UsersController < Internal::ApplicationController
 
   def show
     @user = User.find(params[:id])
-    @user_mentee_relationships = MentorRelationship.where(mentor_id: @user.id)
-    @user_mentor_relationships = MentorRelationship.where(mentee_id: @user.id)
+    @organizations = @user.organizations
   end
 
   def update
     @user = User.find(params[:id])
-    @new_mentee = user_params[:add_mentee]
-    @new_mentor = user_params[:add_mentor]
-    handle_mentorship
-    add_note
-    @user.update!(user_params)
-    redirect_to "/internal/users/#{@user.id}"
+    manage_credits
+    add_note if user_params[:new_note]
+    redirect_to "/internal/users/#{params[:id]}"
   end
 
-  def handle_mentorship
-    if user_params[:ban_from_mentorship] == "1"
-      ban_from_mentorship
+  def user_status
+    @user = User.find(params[:id])
+    begin
+      Moderator::ManageActivityAndRoles.handle_user_roles(admin: current_user, user: @user, user_params: user_params)
+      flash[:success] = "User has been updated"
+    rescue StandardError => e
+      flash[:danger] = e.message
     end
-
-    if @new_mentee.blank? && @new_mentor.blank?
-      return
-    end
-    make_matches
-  end
-
-  def make_matches
-    if !@new_mentee.blank?
-      mentee = User.find(@new_mentee)
-      MentorRelationship.new(mentee_id: mentee.id, mentor_id: @user.id).save!
-    end
-
-    if !@new_mentor.blank?
-      mentor = User.find(@new_mentor)
-      MentorRelationship.new(mentee_id: @user.id, mentor_id: mentor.id).save!
-    end
-  end
-
-  def add_note
-    if user_params[:mentorship_note]
-      Note.create(
-        author_id: @current_user.id,
-        noteable_id: @user.id,
-        noteable_type: "User",
-        reason: "mentorship",
-        content: user_params[:mentorship_note],
-      )
-    end
-  end
-
-  def inactive_mentorship(mentor, mentee)
-    relationship = MentorRelationship.where(mentor_id: mentor.id, mentee_id: mentee.id)
-    relationship.update(active: false)
-  end
-
-  def ban_from_mentorship
-    @user.add_role :banned_from_mentorship
-    mentee_relationships = MentorRelationship.where(mentor_id: @user.id)
-    mentor_relationships = MentorRelationship.where(mentee_id: @user.id)
-    deactivate_mentorship(mentee_relationships)
-    deactivate_mentorship(mentor_relationships)
-  end
-
-  def deactivate_mentorship(relationships)
-    relationships.each do |relationship|
-      relationship.update(active: false)
-    end
+    redirect_to "/internal/users/#{@user.id}/edit"
   end
 
   def banish
     @user = User.find(params[:id])
-    strip_user(@user)
+    begin
+      Moderator::BanishUser.call_banish(admin: current_user, user: @user)
+    rescue StandardError => e
+      flash[:danger] = e.message
+    end
     redirect_to "/internal/users/#{@user.id}/edit"
   end
 
-  def strip_user(user)
-    return unless user.comments.where("created_at < ?", 7.days.ago).empty?
-    new_name = "spam_#{rand(10000)}"
-    new_username = "spam_#{rand(10000)}"
-    if User.find_by(name: new_name) || User.find_by(username: new_username)
-      new_name = "spam_#{rand(10000)}"
-      new_username = "spam_#{rand(10000)}"
+  def full_delete
+    @user = User.find(params[:id])
+    begin
+      Moderator::DeleteUser.call_deletion(admin: current_user, user: @user, user_params: user_params)
+      flash[:success] = "@" + @user.username + " (email: " + @user.email + ", user_id: " + @user.id.to_s + ") has been fully deleted. If requested, old content may have been ghostified. If this is a GDPR delete, delete them from Mailchimp & Google Analytics."
+    rescue StandardError => e
+      flash[:danger] = e.message
     end
-    user.name = new_name
-    user.username = new_username
-    user.twitter_username = ""
-    user.github_username = ""
-    user.website_url = ""
-    user.summary = ""
-    user.location = ""
-    user.education = ""
-    user.employer_name = ""
-    user.employer_url = ""
-    user.employment_title = ""
-    user.mostly_work_with = ""
-    user.currently_learning = ""
-    user.currently_hacking_on = ""
-    user.available_for = ""
-    user.email_public = false
-    user.facebook_url = nil
-    user.dribbble_url = nil
-    user.stackoverflow_url = nil
-    user.behance_url = nil
-    user.linkedin_url = nil
-    user.add_role :banned
-    unless user.notes.where(reason: "banned").any?
-      user.notes.
-        create!(reason: "banned", content: "spam account", author_id: current_user.id)
+    redirect_to "/internal/users"
+  end
+
+  def merge
+    @user = User.find(params[:id])
+    begin
+      Moderator::MergeUser.call_merge(admin: current_user, keep_user: @user, delete_user_id: user_params["merge_user_id"])
+    rescue StandardError => e
+      flash[:danger] = e.message
     end
-    user.comments.each do |comment|
-      comment.reactions.each { |rxn| rxn.delay.destroy! }
-      comment.delay.destroy!
+    redirect_to "/internal/users/#{@user.id}/edit"
+  end
+
+  def remove_identity
+    identity = Identity.find(user_params[:identity_id])
+    @user = identity.user
+    begin
+      BackupData.backup!(identity)
+      identity.delete
+      @user.update("#{identity.provider}_username" => nil)
+      flash[:success] = "The #{identity.provider.capitalize} identity was successfully deleted and backed up."
+    rescue StandardError => e
+      flash[:danger] = e.message
     end
-    user.articles.each { |article| article.delay.destroy! }
-    user.remove_from_index!
-    user.save!
-    CacheBuster.new.bust("/#{user.old_username}")
-    user.update!(old_username: nil)
-  rescue StandardError => e
-    flash[:error] = e.message
+    redirect_to "/internal/users/#{@user.id}/edit"
+  end
+
+  def recover_identity
+    backup = BackupData.find(user_params[:backup_data_id])
+    @user = backup.instance_user
+    begin
+      identity = backup.recover!
+      flash[:success] = "The #{identity.provider} identity was successfully recovered, and the backup was removed."
+    rescue StandardError => e
+      flash[:danger] = e.message
+    end
+    redirect_to "/internal/users/#{@user.id}/edit"
   end
 
   private
 
+  def manage_credits
+    add_credits if user_params[:add_credits]
+    add_org_credits if user_params[:add_org_credits]
+    remove_org_credits if user_params[:remove_org_credits]
+    remove_credits if user_params[:remove_credits]
+  end
+
+  def add_note
+    Note.create(
+      author_id: current_user.id,
+      noteable_id: @user.id,
+      noteable_type: "User",
+      reason: "misc_note",
+      content: user_params[:new_note],
+    )
+  end
+
+  def add_credits
+    amount = user_params[:add_credits].to_i
+    Credit.add_to(@user, amount)
+  end
+
+  def remove_credits
+    amount = user_params[:remove_credits].to_i
+    Credit.remove_from(@user, amount)
+  end
+
+  def add_org_credits
+    org = Organization.find(user_params[:organization_id])
+    amount = user_params[:add_org_credits].to_i
+    Credit.add_to_org(org, amount)
+  end
+
+  def remove_org_credits
+    org = Organization.find(user_params[:organization_id])
+    amount = user_params[:remove_org_credits].to_i
+    Credit.remove_from_org(org, amount)
+  end
+
   def user_params
-    params.require(:user).permit(:seeking_mentorship,
-                                 :offering_mentorship,
-                                 :add_mentor,
-                                 :add_mentee,
-                                 :mentorship_note,
-                                 :ban_from_mentorship)
+    allowed_params = %i[
+      new_note note_for_current_role user_status
+      pro merge_user_id add_credits remove_credits
+      add_org_credits remove_org_credits ghostify
+      organization_id identity_id backup_data_id
+    ]
+    params.require(:user).permit(allowed_params)
   end
 end

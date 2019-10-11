@@ -41,26 +41,31 @@ class ReactionsController < ApplicationController
   def create
     authorize Reaction
     Rails.cache.delete "count_for_reactable-#{params[:reactable_type]}-#{params[:reactable_id]}"
+    category = params[:category] || "like"
     reaction = Reaction.where(
       user_id: current_user.id,
       reactable_id: params[:reactable_id],
       reactable_type: params[:reactable_type],
-      category: params[:category] || "like",
+      category: category,
     ).first
     if reaction
       reaction.user.touch
       reaction.destroy
+      Notification.send_reaction_notification_without_delay(reaction, reaction.reactable.user)
+      Notification.send_reaction_notification_without_delay(reaction, reaction.reactable.organization) if organization_article?(reaction)
       @result = "destroy"
     else
-      Reaction.create!(
+      reaction = Reaction.create!(
         user_id: current_user.id,
         reactable_id: params[:reactable_id],
         reactable_type: params[:reactable_type],
-        category: params[:category] || "like",
+        category: category,
       )
       @result = "create"
+      Notification.send_reaction_notification(reaction, reaction.reactable.user)
+      Notification.send_reaction_notification(reaction, reaction.reactable.organization) if organization_article?(reaction)
     end
-    render json: { result: @result, category: params[:category] || "like" }
+    render json: { result: @result, category: category }
   end
 
   def cached_user_positive_reactions(user)
@@ -68,5 +73,11 @@ class ReactionsController < ApplicationController
       Reaction.where(user_id: user.id).
         where("points > ?", 0)
     end
+  end
+
+  private
+
+  def organization_article?(reaction)
+    reaction.reactable_type == "Article" && reaction.reactable.organization_id
   end
 end

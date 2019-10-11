@@ -37,7 +37,7 @@ rspec_options = {
   cmd: "bin/spring rspec -p",
   #############################
   failed_mode: :focus,
-  bundler_env: :clean_env,
+  bundler_env: :clean_env
 }
 
 guard :rspec, rspec_options do
@@ -57,14 +57,14 @@ guard :rspec, rspec_options do
   dsl.watch_spec_files_for(ruby.lib_files)
 
   # Rails files
-  rails = dsl.rails(view_extensions: %w(erb haml slim))
+  rails = dsl.rails(view_extensions: %w[erb haml slim])
   dsl.watch_spec_files_for(rails.app_files)
   dsl.watch_spec_files_for(rails.views)
 
   watch(rails.controllers) do |m|
     [
       rspec.spec.call("routing/#{m[1]}_routing"),
-      rspec.spec.call("controllers/#{m[1]}_controller"),
+      rspec.spec.call("requests/#{m[1]}"),
       rspec.spec.call("acceptance/#{m[1]}"),
     ]
   end

@@ -1,8 +1,8 @@
 import { h, render as preactRender } from 'preact';
 import render from 'preact-render-to-json';
 import { shallow, deep } from 'preact-render-spy';
-import Tags from '../tags';
 import { JSDOM } from 'jsdom';
+import Tags from '../../../shared/components/tags';
 import algoliasearch from '../__mocks__/algoliasearch';
 
 describe('<Tags />', () => {
@@ -14,12 +14,12 @@ describe('<Tags />', () => {
   });
 
   it('renders properly', () => {
-    const tree = render(<Tags defaultValue="" onInput={jest.fn()} />);
+    const tree = render(<Tags defaultValue="" onInput={jest.fn()} classPrefix={`articleform`} maxTags={4} />);
     expect(tree).toMatchSnapshot();
   });
 
   it('shows tags as you search', () => {
-    const context = shallow(<Tags defaultValue="" onInput={jest.fn()} />);
+    const context = shallow(<Tags defaultValue="" onInput={jest.fn()} classPrefix={`articleform`} maxTags={4} />);
     const component = context.component();
 
     return component
@@ -31,7 +31,7 @@ describe('<Tags />', () => {
 
   it('selects tag when you click on it', () => {
     const component = preactRender(
-      <Tags defaultValue="" onInput={jest.fn()} />,
+      <Tags defaultValue="" onInput={jest.fn()} classPrefix={`articleform`} maxTags={4} />,
       document.body,
       document.body.firstElementChild,
     )._component;
@@ -42,7 +42,7 @@ describe('<Tags />', () => {
 
   it('replaces tag when editing', () => {
     const component = preactRender(
-      <Tags defaultValue="" onInput={jest.fn()} />,
+      <Tags defaultValue="" onInput={jest.fn()} classPrefix={`articleform`} maxTags={4} />,
       document.body,
       document.body.firstElementChild,
     )._component;
@@ -57,14 +57,14 @@ describe('<Tags />', () => {
 
   it('shows tags when editing', () => {
     const component = preactRender(
-      <Tags defaultValue="" onInput={jest.fn()} />,
+      <Tags defaultValue="" onInput={jest.fn()} classPrefix={`articleform`} maxTags={4} />,
       document.body,
       document.body.firstElementChild,
     )._component;
 
     return component
       .handleInput({
-        target: { value: 'gi,javascript,linux', selectionStart: 2 },
+        target: { value: 'gi, javascript, linux', selectionStart: 2 },
       })
       .then(() => {
         expect(component.state).toMatchSnapshot();
@@ -72,16 +72,13 @@ describe('<Tags />', () => {
   });
 
   it('only allows 4 tags', () => {
-    const component = preactRender(
-      <Tags defaultValue="" onInput={jest.fn()} />,
-      document.body,
-      document.body.firstElementChild,
-    )._component;
+    const component = shallow(<Tags defaultValue="" onInput={jest.fn()} classPrefix={`articleform`} maxTags={4} />);
 
-    component.handleInput({
-      target: { value: 'java,javascript,linux,productivity' },
+    component.simulate('input', {
+      target: { value: 'java, javascript, linux, productivity' },
     });
-    component.handleKeyDown({ keyCode: 188, preventDefault: jest.fn() });
-    expect(component.state).toMatchSnapshot();
+
+    component.simulate('keydown', { keyCode: 188, preventDefault: jest.fn() });
+    expect(component.state()).toMatchSnapshot();
   });
 });

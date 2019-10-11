@@ -9,11 +9,46 @@ module Redcarpet
         # Probably not the best fix but it does it's job of preventing
         # a nested links.
         return nil if /<a\s.+\/a>/.match?(content)
+
         link_attributes = ""
         @options[:link_attributes]&.each do |attribute, value|
           link_attributes += %( #{attribute}="#{value}")
         end
-        %(<a href="#{link}"#{link_attributes}>#{content}</a>)
+        if (/https?:\/\/[\S]+/.match? link) || link.nil?
+          %(<a href="#{link}"#{link_attributes}>#{content}</a>)
+        elsif /\.{1}/.match? link
+          %(<a href="//#{link}"#{link_attributes}>#{content}</a>)
+        elsif link.start_with?("#")
+          %(<a href="#{link}"#{link_attributes}>#{content}</a>)
+        else
+          %(<a href="#{app_protocol}#{app_domain}#{link}"#{link_attributes}>#{content}</a>)
+        end
+      end
+
+      def header(title, header_number)
+        anchor_link = slugify(title)
+        <<~HEREDOC
+          <h#{header_number}>
+            <a name="#{anchor_link}" href="##{anchor_link}" class="anchor">
+            </a>
+            #{title}
+          </h#{header_number}>
+        HEREDOC
+      end
+
+      private
+
+      def app_protocol
+        ApplicationConfig["APP_PROTOCOL"]
+      end
+
+      def app_domain
+        ApplicationConfig["APP_DOMAIN"]
+      end
+
+      def slugify(string)
+        stripped_string = ActionView::Base.full_sanitizer.sanitize string
+        stripped_string.downcase.gsub(EmojiRegex::Regex, "").strip.gsub(/[[:punct:]]/u, "").gsub(/\s+/, "-")
       end
     end
   end

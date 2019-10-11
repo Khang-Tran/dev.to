@@ -33,4 +33,17 @@ RSpec.describe Tag, type: :model do
     tag.save
     expect(tag.rules_html.include?("href")).to be(true)
   end
+
+  it "marks as updated after save" do
+    tag.save
+    expect(tag.reload.updated_at).to be > 1.minute.ago
+  end
+
+  it "knows class valid categories" do
+    expect(described_class.valid_categories).to include("tool")
+  end
+
+  it "triggers cache busting on save" do
+    expect { build(:tag).save }.to have_enqueued_job.on_queue("tags_bust_cache")
+  end
 end

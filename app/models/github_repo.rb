@@ -19,7 +19,7 @@ class GithubRepo < ApplicationRecord
 
   def self.update_to_latest
     where("updated_at < ?", 1.day.ago).find_each do |repo|
-      user_token = User.find_by_id(repo.user_id).identities.where(provider: "github").last.token
+      user_token = User.find_by(id: repo.user_id).identities.where(provider: "github").last.token
       client = Octokit::Client.new(access_token: user_token)
       begin
         fetched_repo = client.repo(repo.info_hash[:full_name])
@@ -34,6 +34,7 @@ class GithubRepo < ApplicationRecord
           stargazers_count: fetched_repo.stargazers_count,
           info_hash: fetched_repo.to_hash,
         )
+        repo.user&.touch(:github_repos_updated_at)
       rescue StandardError => e
         repo.destroy if e.message.include?("404 - Not Found")
       end
@@ -44,6 +45,7 @@ class GithubRepo < ApplicationRecord
 
   def clear_caches
     return if user.blank?
+
     user.touch
     cache_buster = CacheBuster.new
     cache_buster.bust user.path

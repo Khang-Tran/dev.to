@@ -4,10 +4,14 @@ RSpec.describe Message, type: :model do
   let(:user) { create(:user) }
   let(:chat_channel) { create(:chat_channel) }
   let(:user2) { create(:user) }
-  let(:long_text) { Faker::Hipster.words(1500) }
+  let(:long_text) { Faker::Hipster.words(number: 1500) }
 
   describe "validations" do
     subject { build(:message, :ignore_after_callback) }
+
+    before do
+      allow(ChatChannel).to receive(:find).and_return(ChatChannel.new)
+    end
 
     it { is_expected.to belong_to(:user) }
     it { is_expected.to belong_to(:chat_channel) }

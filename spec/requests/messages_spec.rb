@@ -9,12 +9,12 @@ RSpec.describe "Messages", type: :request do
       {
         message_markdown: "hi",
         user_id: user.id,
-        chat_channel_id: chat_channel.id,
+        chat_channel_id: chat_channel.id
       }
     end
 
     it "requires user to be signed in" do
-      post "/messages", params: { message: new_message }
+      post "/messages", params: { message: {} }
       expect(response.status).to eq(302)
     end
     # Pusher::Error

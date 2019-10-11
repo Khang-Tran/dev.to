@@ -13,17 +13,17 @@ class MessagesController < ApplicationController
     end
     if @message.save
       begin
-        @message.delay.send_push
+        @message.send_push
         success = true
       rescue Pusher::Error => e
         logger.info "PUSHER ERROR: #{e.message}"
       end
 
       if success
-        render json: { status: "success", message: "Message created" }, status: 201
+        render json: { status: "success", message: "Message created" }, status: :created
       else
         error_message = "Message created but could not trigger Pusher"
-        render json: { status: "error", message: error_message }, status: 201
+        render json: { status: "error", message: error_message }, status: :created
       end
     else
       render json: {
@@ -31,9 +31,9 @@ class MessagesController < ApplicationController
         message: {
           chat_channel_id: @message.chat_channel_id,
           message: @message.errors.full_messages,
-          type: "error",
-        },
-      }, status: 401
+          type: "error"
+        }
+      }, status: :unauthorized
     end
   end
 
@@ -47,9 +47,9 @@ class MessagesController < ApplicationController
       username: new_message.user.username,
       profile_image_url: ProfileImage.new(new_message.user).get(90),
       message: new_message.message_html,
-      timestamp: Time.now,
+      timestamp: Time.current,
       color: new_message.preferred_user_color,
-      reception_method: "pushed",
+      reception_method: "pushed"
     }.to_json
   end
 
@@ -65,9 +65,9 @@ class MessagesController < ApplicationController
           message: {
             chat_channel_id: message_params[:chat_channel_id],
             message: "You can not do that because you are banned",
-            type: "error",
-          },
-        }, status: 401
+            type: "error"
+          }
+        }, status: :unauthorized
       end
     end
   end

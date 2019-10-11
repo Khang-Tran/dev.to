@@ -15,6 +15,7 @@ class OrganizationDashboard < Administrate::BaseDashboard
     tag_line: Field::String,
     profile_image: CarrierwaveField,
     nav_image: CarrierwaveField,
+    dark_nav_image: CarrierwaveField,
     url: Field::String,
     twitter_username: Field::String,
     github_username: Field::String,
@@ -33,7 +34,7 @@ class OrganizationDashboard < Administrate::BaseDashboard
     approved: Field::Boolean,
     cta_button_text: Field::String,
     cta_button_url: Field::String,
-    cta_body_markdown: Field::Text,
+    cta_body_markdown: Field::Text
   }.freeze
 
   # COLLECTION_ATTRIBUTES
@@ -63,6 +64,7 @@ class OrganizationDashboard < Administrate::BaseDashboard
     tag_line
     profile_image
     nav_image
+    dark_nav_image
     url
     bg_color_hex
     text_color_hex

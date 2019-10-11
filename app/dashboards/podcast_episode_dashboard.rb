@@ -29,9 +29,11 @@ class PodcastEpisodeDashboard < Administrate::BaseDashboard
     published_at: Field::DateTime,
     slug: Field::String,
     guid: Field::String,
+    reachable: Field::Boolean,
+    https: Field::Boolean,
     created_at: Field::DateTime,
     updated_at: Field::DateTime,
-    social_image: CarrierwaveField,
+    social_image: CarrierwaveField
   }.freeze
 
   # COLLECTION_ATTRIBUTES
@@ -42,6 +44,9 @@ class PodcastEpisodeDashboard < Administrate::BaseDashboard
   COLLECTION_ATTRIBUTES = %i[
     id
     title
+    media_url
+    reachable
+    https
   ].freeze
 
   # SHOW_PAGE_ATTRIBUTES
@@ -61,6 +66,8 @@ class PodcastEpisodeDashboard < Administrate::BaseDashboard
     duration_in_seconds
     published_at
     slug
+    reachable
+    https
     created_at
     updated_at
   ].freeze

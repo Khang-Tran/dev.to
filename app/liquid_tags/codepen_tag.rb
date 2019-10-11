@@ -1,35 +1,53 @@
 class CodepenTag < LiquidTagBase
+  PARTIAL = "liquids/codepen".freeze
+  URL_REGEXP = /\A(http|https):\/\/(codepen\.io|codepen\.io\/team)\/[a-zA-Z0-9_\-]{1,30}\/pen\/([a-zA-Z]{5,7})\/{0,1}\z/.freeze
+
   def initialize(tag_name, link, tokens)
     super
     @link = parse_link(link)
-    @height = 600
+    @build_options = parse_options(link)
   end
 
   def render(_context)
-    html = <<-HTML
-      <iframe height="#{@height}"
-        src="#{@link}?height=500&default-tab=result&embed-version=2"
-        scrolling="no"
-        frameborder="no"
-        allowtransparency="true"
-        style="width: 100%;">
-      </iframe>
-    HTML
-    finalize_html(html)
+    ActionController::Base.new.render_to_string(
+      partial: PARTIAL,
+      locals: {
+        link: @link,
+        height: 600,
+        build_options: @build_options
+      },
+    )
   end
 
   private
 
+  def valid_option(option)
+    option.match(/(default-tab\=\w+(\,\w+)?)/)
+  end
+
+  def parse_options(input)
+    stripped_link = ActionController::Base.helpers.strip_tags(input)
+    _, *options = stripped_link.split(" ")
+
+    # Validation
+    validated_options = options.map { |option| valid_option(option) }.reject(&:nil?)
+    raise StandardError, "Invalid Options" unless options.empty? || !validated_options.empty?
+
+    option = validated_options.join("&")
+
+    option.presence || "default-tab=result"
+  end
+
   def parse_link(link)
     stripped_link = ActionController::Base.helpers.strip_tags(link)
-    raise_error unless valid_link?(stripped_link)
-    stripped_link.gsub("/pen/", "/embed/")
+    the_link = stripped_link.split(" ").first
+    raise_error unless valid_link?(the_link)
+    the_link.gsub("/pen/", "/embed/")
   end
 
   def valid_link?(link)
     link_no_space = link.delete(" ")
-    (link_no_space =~
-      /^(http|https):\/\/(codepen\.io)\/[a-zA-Z0-9\-]{1,20}\/pen\/([a-zA-Z]{6})\z/)&.zero?
+    (link_no_space =~ URL_REGEXP)&.zero?
   end
 
   def raise_error

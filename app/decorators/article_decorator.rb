@@ -22,11 +22,7 @@ class ArticleDecorator < ApplicationDecorator
   end
 
   def url
-    "https://dev.to#{path}"
-  end
-
-  def liquid_tags_used
-    MarkdownParser.new(body_markdown.to_s + comments_blob.to_s).tags_used
+    "https://#{ApplicationConfig['APP_DOMAIN']}#{path}"
   end
 
   def title_length_classification
@@ -50,5 +46,9 @@ class ArticleDecorator < ApplicationDecorator
                  "regular"
                end
     "?utm_source=#{place}&utm_medium=internal&utm_campaign=#{campaign}&booster_org=#{organization&.slug}"
+  end
+
+  def published_at_int
+    published_at.to_i
   end
 end

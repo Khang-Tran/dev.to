@@ -9,22 +9,22 @@
     <% if @organization %>
       <% if @organization.location.present? %>
         <div class="row">
-          <div class="key">  
+          <div class="key">
             headquarters
           </div>
           <div class="value">
-            <%= @organization.location %>
-          </div>                              
+            <%= sanitize @organization.location %>
+          </div>
         </div>
       <% end %>
       <% if @organization.company_size.present? %>
         <div class="row">
-          <div class="key">  
+          <div class="key">
             employees
           </div>
           <div class="value">
             <%= @organization.company_size %>
-          </div>                              
+          </div>
         </div>
       <% end %>
       <% if @organization.email.present? %>
@@ -33,7 +33,7 @@
             support_email
           </div>
           <div class="value">
-            <a href="mailto:<%= @organization.email %>"><%= @organization.email %></a>
+            <a href="mailto:<%= sanitize @organization.email %>"><%= sanitize @organization.email %></a>
           </div>
         </div>
       <% end %>
@@ -43,14 +43,16 @@
           @user.employer_name.present? &&
           @user.location.present? &&
           @user.education.present? &&
-          @user.education.size > 25 && 
+          @user.education.size > 25 &&
           @user.summary.to_s.size < 145
           %>
         <style>
-          .user-profile-header {min-height: 398px;}
+          .user-profile-header {
+            min-height: 398px;
+          }
         </style>
       <% end %>
-      <% if @user.email_public %>
+      <% if @user.email_public && context != "sidebar" %>
         <div class="row">
           <div class="key">
             email
@@ -68,7 +70,7 @@
           <div class="value">
             <span><%= @user.employment_title %></span>
             <% if @user.employer_name.present? %>
-              <span> at <span>
+              <span> at </span>
               <% if @user.employer_url.present? %>
                 <a href="<%= @user.employer_url %>" target="_blank" rel="noopener"><%= @user.employer_name %></a>
               <% else %>

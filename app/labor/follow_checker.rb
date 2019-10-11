@@ -8,11 +8,13 @@ class FollowChecker
   end
 
   def cached_follow_check
-    Rails.cache.fetch("user-#{follower.id}-#{follower.updated_at}/is_following_#{followable_type}_#{followable_id}", expires_in: 100.hours) do
+    Rails.cache.fetch("user-#{follower.id}-#{follower.updated_at}/is_following_#{followable_type}_#{followable_id}", expires_in: 20.hours) do
       followable = if followable_type == "Tag"
                      Tag.find(followable_id)
                    elsif followable_type == "Organization"
                      Organization.find(followable_id)
+                   elsif followable_type == "Podcast"
+                     Podcast.find(followable_id)
                    else
                      User.find(followable_id)
                    end

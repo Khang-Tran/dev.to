@@ -1,5 +1,3 @@
-# rubocop:disable Metrics/BlockLength
-
 Rails.application.configure do
   # Verifies that versions and hashed value of the package contents in the project's package.json
   config.webpacker.check_yarn_integrity = false
@@ -30,11 +28,11 @@ Rails.application.configure do
   # Apache or NGINX already handles this.
   config.public_file_server.enabled = ENV["RAILS_SERVE_STATIC_FILES"].present?
   config.public_file_server.headers = {
-    "Cache-Control" => "public, s-maxage=2592000, max-age=86400",
+    "Cache-Control" => "public, s-maxage=2592000, max-age=86400"
   }
 
   # Compress JavaScripts and CSS.
-  config.assets.js_compressor = :uglifier
+  config.assets.js_compressor = Uglifier.new(harmony: true)
   # config.assets.css_compressor = :sass
 
   # Do not fallback to assets pipeline if a precompiled asset is missed.
@@ -77,7 +75,7 @@ Rails.application.configure do
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).
-  config.i18n.fallbacks = true
+  config.i18n.fallbacks = [I18n.default_locale]
 
   # Send deprecation notices to registered listeners.
   config.active_support.deprecation = :notify
@@ -92,7 +90,8 @@ Rails.application.configure do
   end
 
   # Timber.io logger
-  log_device = Timber::LogDevices::HTTP.new(ENV["TIMBER"])
+  send_logs_to_timber = ENV["SEND_LOGS_TO_TIMBER"] || "true" # <---- production should send timber logs by default
+  log_device = send_logs_to_timber == "true" ? Timber::LogDevices::HTTP.new(ENV["TIMBER"]) : STDOUT
   logger = Timber::Logger.new(log_device)
   logger.level = config.log_level
   config.logger = ActiveSupport::TaggedLogging.new(logger)
@@ -120,11 +119,11 @@ Rails.application.configure do
     user_name: ENV["SENDGRID_USERNAME_ACCEL"],
     password: ENV["SENDGRID_PASSWORD_ACCEL"],
     domain: "dev.to",
-    enable_starttls_auto: true,
+    enable_starttls_auto: true
   }
 
   config.middleware.use Rack::HostRedirect,
-    "practicaldev.herokuapp.com" => "dev.to"
+                        "practicaldev.herokuapp.com" => "dev.to"
 end
 
-# rubocop:enable Metrics/BlockLength
+Rails.application.routes.default_url_options = { host: Rails.application.config.app_domain, protocol: :https }

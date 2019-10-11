@@ -8,11 +8,11 @@ module Suggester
 
       def suggest
         users = if user.decorate.cached_followed_tag_names.any?
-                  ((recent_producers(1) + recent_producers(4) + recent_commenters - [user]).
-                           shuffle.first(55) + tagged_producers).uniq
+                  (recent_producers(3) - [user]).
+                    sample(50).uniq
                 else
                   (recent_commenters(4, 30) + recent_top_producers - [user]).
-                    uniq.shuffle.first(50)
+                    uniq.sample(50)
                 end
         users
       end
@@ -20,11 +20,9 @@ module Suggester
       private
 
       def tagged_article_user_ids(num_weeks = 1)
-        Article.
+        Article.published.
           tagged_with(user.decorate.cached_followed_tag_names, any: true).
-          where(published: true).
-          where("positive_reactions_count > ? AND published_at > ?",
-                article_reaction_count, num_weeks.weeks.ago).
+          where("score > ? AND published_at > ?", article_reaction_count, num_weeks.weeks.ago).
           pluck(:user_id).
           each_with_object(Hash.new(0)) { |value, counts| counts[value] += 1 }.
           sort_by { |_key, value| value }.
@@ -32,7 +30,7 @@ module Suggester
       end
 
       def recent_producers(num_weeks = 1)
-        User.where(id: tagged_article_user_ids(num_weeks)).order("updated_at DESC").limit(50).to_a
+        User.where(id: tagged_article_user_ids(num_weeks)).order("updated_at DESC").limit(80).to_a
       end
 
       def recent_top_producers
@@ -45,10 +43,6 @@ module Suggester
         User.where("comments_count > ?", num_coumments).order("updated_at DESC").limit(limit).to_a
       end
 
-      def tagged_producers
-        User.tagged_with(user.decorate.cached_followed_tag_names, any: true).limit(15).to_a
-      end
-
       def established_user_article_count
         Rails.env.production? ? 4 : -1
       end
@@ -58,7 +52,7 @@ module Suggester
       end
 
       def article_reaction_count
-        Rails.env.production? ? 14 : -1
+        Rails.env.production? ? 15 : -1
       end
     end
   end

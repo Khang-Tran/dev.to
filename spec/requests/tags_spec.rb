@@ -86,10 +86,16 @@ RSpec.describe "Tags", type: :request, proper_status: true do
         expect(response).to redirect_to("/t/#{tag}/edit")
       end
 
+      it "updates updated_at for tag" do
+        tag.update_column(:updated_at, 2.weeks.ago)
+        patch "/tag/#{tag.id}", params: valid_params
+        expect(tag.reload.updated_at).to be > 1.minute.ago
+      end
+
       it "displays proper error messages" do
         invalid_text_color_hex = "udjsadasfkdjsa"
         patch "/tag/#{tag.id}", params: {
-          tag: { text_color_hex: invalid_text_color_hex, bg_color_hex: "" },
+          tag: { text_color_hex: invalid_text_color_hex, bg_color_hex: "" }
         }
         expect(response.body).to include("Text color hex is invalid")
       end

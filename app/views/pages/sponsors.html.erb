@@ -1,23 +1,23 @@
-<% title "DEV Sponsors" %>
+<% title "#{ApplicationConfig['COMMUNITY_NAME']} Sponsors" %>
 
 <%= content_for :page_meta do %>
-  <link rel="canonical" href="https://dev.to/sponsors"/>
+  <link rel="canonical" href="https://dev.to/sponsors" />
   <meta name="description" content="dev.to | Sponsors">
   <meta name="keywords" content="software development,engineering,rails,javascript,ruby">
-
 <% end %>
 
-<header>
-  <div class="blank-space"></div>
-</header>
+<div class="blank-space"></div>
 
 <style>
   .container .body h4 img {
     top: 10px;
     display: inline;
     left: 0;
-  }  
-}   
+  }
+  .sponsor-level-headline {
+    padding:5px 18px;
+    border-radius: 3px;
+  }
 </style>
 
 <div class="container article">
@@ -29,33 +29,48 @@
     </h1>
     <p style="margin:5px 5px;"><em>for supporting our community</em></p>
 
-    <h4><img src="<%= cloudinary("https://thepracticaldev.s3.amazonaws.com/i/2zmukvll98je8qsdyewq.png", 30) %>"><span style="background-color: #fefa87; padding:3px;">Gold Sponsors</span><img src="<%= cloudinary("https://thepracticaldev.s3.amazonaws.com/i/2zmukvll98je8qsdyewq.png", 30) %>"></h4>
+    <h4>
+      <img src="<%= cloudinary("https://thepracticaldev.s3.amazonaws.com/i/2zmukvll98je8qsdyewq.png", 30) %>" alt="golden badge">
+      <span class="sponsor-level-headline" style="background-color: #fefa87;">Gold Sponsors</span>
+      <img src="<%= cloudinary("https://thepracticaldev.s3.amazonaws.com/i/2zmukvll98je8qsdyewq.png", 30) %>" alt="golden badge">
+    </h4>
     <div id="gold-sponsors">
-      <a href="https://try.digitalocean.com/performance/?utm_source=devto&utm_medium=display&utm_campaign=Devto_2018_Brand"><img src="<%= cloudinary("https://thepracticaldev.s3.amazonaws.com/i/85318v8gv77kzr8r2e58.png", 250) %>"></a>
-
-      <p><a href="https://try.digitalocean.com/performance/?utm_source=devto&amp;utm_medium=display&amp;utm_campaign=Devto_2018_Brand">Digital Ocean</a> is a much-loved cloud computing platform. I'm always impressed by how well-built <em>and well-documented</em> the Digital Ocean core products are. It's easier said than done, and they've been able to stay ahead of the curve.</p>
-            
-      <hr/>
-
-      <a href="https://www.twilio.com/?utm_source=devto&utm_medium=banner&utm_campaign=summer_awareness_campaign"><img src="<%= cloudinary("https://thepracticaldev.s3.amazonaws.com/i/lgumfafaywo0zz90ciig.png", 260) %>" /></a>
-
-      <p><a href="https://www.twilio.com/?utm_source=devto&utm_medium=banner&utm_campaign=summer_awareness_campaign">Twilio</a> has been a great friend of ours since early in the <a href="/">dev.to</a> days. We are users of their APIs, and folks from our team are always excited to get involved in their community initiatives. It's great to have them as a sponsor!</p>
-      
-      <hr/>
-      
-      <a href="https://developer.qlik.com?utm_medium=direct_buy&utm_source=devto&utm_campaign=allylogo"><img src="<%= cloudinary("https://thepracticaldev.s3.amazonaws.com/i/eyinucxpl8a4ag51punb.png", 260) %>" /></a>
-
-      <p><a href="https://developer.qlik.com?utm_medium=direct_buy&utm_source=devto&utm_campaign=allylogo">Qlik</a> is a data analytics platform that powers some of the world's biggest organizations. Qlik Branch Playground is a programming environment that allows you to use, explore, and test Qlik technology. This is often the missing piece when working with data platforms like Qlik. Playground helps you understand and leverage the power of the platform.</p>
-
-      <hr/>
+      <% Sponsorship.gold.live.includes(:organization).order(featured_number: :asc).each do |sponsorship| %>
+        <a href="<%= sponsorship.url %>"><%= render "sponsor_image", sponsorship: sponsorship %></a>
+        <p>
+          <%= sponsorship.blurb_html&.html_safe %>
+        </p>
+        <hr />
+      <% end %>
     </div>
-      <h4>In-Kind Sponsors</h4>
 
-      <a href="https://mule.to/devto-hacktoberfest-18"><img src="<%= cloudinary("https://thepracticaldev.s3.amazonaws.com/i/r9jqbia4k4so4kl5ndd1.png", 260) %>" /></a>
-    
-      <p>Thank you to <a href="https://mule.to/devto-hacktoberfest-18">StickerMule</a> for their long-standing support of DEV.  Sticker Mule is also providing stickers for our <a href="https://www.eventbrite.com/e/hacktoberfest-night-dev-flatiron-school-nyc-tickets-50536426813">October 10, 2018 Hacktoberfest event</a> in NYC.</p>
+    <h4>
+      <img src="<%= cloudinary("https://thepracticaldev.s3.amazonaws.com/i/2zmukvll98je8qsdyewq.png", 30) %>" alt="silver badge">
+      <span class="sponsor-level-headline" style="background-color: #d8e1f0;">Silver Sponsors</span>
+      <img src="<%= cloudinary("https://thepracticaldev.s3.amazonaws.com/i/2zmukvll98je8qsdyewq.png", 30) %>" alt="silver badge">
+    </h4>
+    <div id="silver-sponsors">
+      <% Sponsorship.where(status: "live", level: "silver").where("expires_at > ?", Time.current).includes(:organization).order(featured_number: :asc).each do |sponsorship| %>
+        <a href="<%= sponsorship.url %>"><%= render "sponsor_image", sponsorship: sponsorship %></a>
+        <p>
+          <%= sponsorship.blurb_html&.html_safe %>
+        </p>
+        <hr />
+      <% end %>
+    </div>
 
-      <hr/>
-    <h5> Interested in sponsoring dev.to? Email <a href="mailto:peter@dev.to">peter@dev.to</a> </h5>      
+    <h4>
+      <img src="<%= cloudinary("https://thepracticaldev.s3.amazonaws.com/i/2zmukvll98je8qsdyewq.png", 30) %>" alt="bronze badge">
+      <span class="sponsor-level-headline" style="background-color: #fcd6bb;">Bronze Sponsors</span>
+      <img src="<%= cloudinary("https://thepracticaldev.s3.amazonaws.com/i/2zmukvll98je8qsdyewq.png", 30) %>" alt="bronze badge">
+    </h4>
+    <div id="bronze-sponsors">
+      <% Sponsorship.bronze.live.where("expires_at > ?", Time.current).includes(:organization).order(featured_number: :asc).find_each do |sponsorship| %>
+        <a href="<%= sponsorship.url %>"><%= render "sponsor_image", sponsorship: sponsorship %></a>
+        <hr />
+      <% end %>
+    </div>
+
+    <h5>Interested in sponsoring dev.to? Check out our <a href="https://dev.to/partnerships">partnerships</a> page.</h5>
   </div>
 </div>

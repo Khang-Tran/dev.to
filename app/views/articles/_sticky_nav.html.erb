@@ -1,101 +1,136 @@
-
 <% @actor = @article.organization || @article.user %>
 <style>
-  .primary-sticky-nav-author,.primary-sticky-nav-author-element{
+  .primary-sticky-nav-author, .primary-sticky-nav-author-element {
     border: 1px solid <%= HexComparer.new([user_colors(@actor)[:bg], user_colors(@actor)[:text]]).brightness(0.88) %> !important;
-    box-shadow: 3px 4px 0px <%= HexComparer.new([user_colors(@actor)[:bg], user_colors(@actor)[:text]]).brightness(0.88) %> !important;
+    box-shadow: 1px 1px 0px <%= HexComparer.new([user_colors(@actor)[:bg], user_colors(@actor)[:text]]).brightness(0.88) %> !important;
   }
-  .primary-sticky-nav-author button{
+
+  .primary-sticky-nav-author button {
     background-color: <%= user_colors(@actor)[:bg] %> !important;
     color: <%= user_colors(@actor)[:text] %> !important;
-    <% if user_colors(@actor)[:bg].downcase == "#ffffff" %>
-      border: 1px solid <%= user_colors(@actor)[:text] %> !important;
-    <% end %>
+  <% if user_colors(@actor)[:bg].downcase == "#ffffff" %>
+    border: 1px solid <%= user_colors(@actor)[:text] %> !important;
+  <% end %>
   }
-  .primary-sticky-nav-author button a{
+
+  .primary-sticky-nav-author button a {
     background-color: <%= user_colors(@actor)[:bg] %> !important;
     color: <%= user_colors(@actor)[:text] %> !important;
-    <% if user_colors(@actor)[:bg].downcase == "#ffffff" %>
-      border: 1px solid <%= user_colors(@actor)[:text] %> !important;
-    <% end %>
+  <% if user_colors(@actor)[:bg].downcase == "#ffffff" %>
+    border: 1px solid <%= user_colors(@actor)[:text] %> !important;
+  <% end %>
   }
-  .sticky-box-connector{
+
+  .sticky-box-connector {
     background: <%= HexComparer.new([user_colors(@actor)[:bg], user_colors(@actor)[:text]]).brightness(0.88) %> !important;
+  }
+
+  .primary-sticky-nav-org-cta-link {
+    background-color: <%= user_colors(@actor)[:text] %> !important;
+    color: <%= user_colors(@actor)[:bg] %> !important;
+  <% if user_colors(@actor)[:text].downcase == "#ffffff" %>
+    border: 2px solid <%= user_colors(@actor)[:bg] %> !important;
+  <% end %>
   }
 </style>
 
-<div class="primary-sticky-nav">
+<div class="primary-sticky-nav" id="article-show-primary-sticky-nav">
   <div class="primary-sticky-nav-element primary-sticky-nav-author">
-    <a href="<%= @actor.path %>"><img src="<%= ProfileImage.new(@actor).get(90) %>" class="primary-sticky-nav-author-top-profile-image" /></a>
-    <span class="primary-sticky-nav-author-name">
-      <a href="<%= @actor.path %>">
-        <%= @actor.name %>
-      </a>
-    </span>
-      <div class="primary-sticky-nav-author-summary">
-        <% if @actor.tag_line.present? %>
-          <%= truncate (@actor.tag_line || @actor.summary || "Posts in this tag"), length: 200 %>
-        <% else %>
-          Member since <%= @actor.created_at.strftime("%b %e, %Y") %>
-        <% end %>
+    <a href="<%= @actor.path %>"><img src="<%= ProfileImage.new(@actor).get(90) %>" class="primary-sticky-nav-author-top-profile-image" alt="<%= @actor.name %> profile image"></a>
+    <div style="display:inline-block">
+      <div class="primary-sticky-nav-author-name">
+        <a href="<%= @actor.path %>">
+          <%= @actor.name %>
+          <%= render "shared/pro_checkmark" if @actor.pro? %>
+        </a>
       </div>
+      <div class="primary-sticky-nav-author-username">
+        <a href="<%= @actor.path %>">
+          @<%= @actor.username %>
+        </a>
+      </div>
+    </div>
+    <div class="primary-sticky-nav-author-summary">
+      <% if @actor.tag_line.present? %>
+        <%= truncate (@actor.tag_line || @actor.summary || "Posts in this tag"), length: 200 %>
+      <% end %>
+    </div>
     <div class="primary-sticky-nav-author-follow">
       <%= follow_button(@actor) %>
     </div>
-  </div>
-  <% if @actor.class.name == "Organization" && @actor.approved_and_filled_out_cta? %>
-    <div class="primary-sticky-nav-element primary-sticky-nav-author primary-sticky-nav-org">
-      <div class="sticky-box-connector"></div>
-      <div class="sticky-box-connector sticky-box-right-connector"></div>
+    <% if @actor.class.name == "User" %>
+      <%= render "articles/user_metadata", context: "sidebar" %>
+    <% elsif @actor.class.name == "Organization" && @actor.approved_and_filled_out_cta? %>
       <div class="primary-sticky-nav-org-summary">
         <%= @actor.cta_processed_html.html_safe %>
-        <button class="cta primary-sticky-nav-org-button">
-          <%= link_to @actor.cta_button_text.upcase || "LEARN MORE", @actor.cta_button_url %>
-        </button>
+        <div class="primary-sticky-nav-org-cta-link-wrapper">
+          <% if @actor.cta_button_text.present? && @actor.cta_button_url.present? %>
+            <a href="<%= @actor.cta_button_url || "LEARN MORE" %>" class="primary-sticky-nav-org-cta-link">
+              <%= @actor.cta_button_text %>
+            </a>
+          <% end %>
+        </div>
       </div>
-    </div>
-  <% end %>
-  <% if @user_stickies && @user_stickies.any? %>
-        <div class="primary-sticky-nav-title">
-      <% if @actor.username.size < 18 %>
-        More from <a href="<%= @actor.path %>">@<%= @actor.username %></a>
-      <% else %>
-        More from<br/><a href="<%= @actor.path %>">@<%= @actor.username %></a>
+    <% end %>
+  </div>
+  <% if @variant_number.to_i == 1 %>
+    <% cache("html-variant-sidebar#{rand(300)}", expires_in: 2.hours) do %>
+      <% @html_variant = HtmlVariant.find_for_test(@article.cached_tag_list_array) %>
+      <% if @html_variant %>
+        <div class="html-variant-wrapper" id="html-variant-article-show-sidebar" data-variant-id="<%= @html_variant.id %>">
+          <%= @html_variant.html.html_safe %>
+        </div>
       <% end %>
-    </div>
-
-    <% @user_stickies.each do |article| %>
-      <a class="primary-sticky-nav-element primary-sticky-nav-author-element" href="<%= article.path %>">
-        <img src="<%= ProfileImage.new(article.user).get(90) %>" class="primary-sticky-nav-profile-image" />
-        <%= article.title %>
-        <div class="primary-sticky-nav-element-details">
-          <% article.decorate.cached_tag_list_array.each do |tag| %>
-            <span>#<%= tag %></span>
-          <% end %>
-        </div>
-      </a>
     <% end %>
-  <% end %>
-  <% if sticky_articles %>
-    <div class="primary-sticky-nav-title">
-      <img src="<%= asset_path "emoji/apple-fire.png"%>"/> Trending on <a href="https://dev.to">dev.to</a>
-    </div>
-    <% sticky_articles.each do |article| %>
-      <a class="primary-sticky-nav-element" href="<%= article.path %>">
-        <img src="<%= ProfileImage.new(article.user).get(90) %>" class="primary-sticky-nav-profile-image" />
-        <%= article.title %>
-        <div class="primary-sticky-nav-element-details">
-          <% article.decorate.cached_tag_list_array.each do |tag| %>
-            <span>#<%= tag %></span>
-          <% end %>
-        </div>
-      </a>
+  <% else %>
+    <% cache("article-sticky-nav-articles-#{@article.id}-#{@actor.last_article_at}", expires_in: 48.hours) do %>
+      <% @sticky_collection = StickyArticleCollection.new(@article, @organization || @user) %>
+      <% @sticky_articles = @sticky_collection.suggested_stickies %>
+      <% @user_stickies = @sticky_collection.user_stickies %>
+      <% if @user_stickies.any? %>
+        <% @user_stickies.each_with_index do |article, index| %>
+          <div class="primary-sticky-nav-element-wrapper">
+            <% if index == 0 %>
+              <div class="primary-sticky-nav-title">
+                <% if @actor.username.size < 18 %>
+                  More from <a href="<%= @actor.path %>">@<%= @actor.username %></a>
+                <% else %>
+                  More from<br /><a href="<%= @actor.path %>">@<%= @actor.username %></a>
+                <% end %>
+              </div>
+            <% end %>
+            <a class="primary-sticky-nav-element primary-sticky-nav-author-element" href="<%= article.path %>">
+              <img src="<%= ProfileImage.new(article.user).get(90) %>" class="primary-sticky-nav-profile-image" loading="lazy" alt="<%= article.user.name %> profile image">
+              <%= article.title %>
+              <div class="primary-sticky-nav-element-details">
+                <% article.decorate.cached_tag_list_array.each do |tag| %>
+                  <span>#<%= tag %></span>
+                <% end %>
+              </div>
+            </a>
+          </div>
+        <% end %>
+      <% end %>
+      <% if @sticky_articles %>
+        <% @sticky_articles.each_with_index do |article, index| %>
+          <div class="primary-sticky-nav-element-wrapper">
+            <% if index == 0 %>
+              <div class="primary-sticky-nav-title">
+                <img src="<%= asset_path "emoji/apple-fire.png" %>" alt="Fire emoji" loading="lazy"> Trending on <a href="<%= ApplicationConfig["APP_PROTOCOL"] %><%= ApplicationConfig["APP_DOMAIN"] %>"><%= ApplicationConfig["COMMUNITY_NAME"] %></a>
+              </div>
+            <% end %>
+            <a class="primary-sticky-nav-element" href="<%= article.path %>">
+              <img src="<%= ProfileImage.new(article.user).get(90) %>" class="primary-sticky-nav-profile-image" loading="lazy" alt="<%= article.user.name %> profile image">
+              <%= article.title %>
+              <div class="primary-sticky-nav-element-details">
+                <% article.decorate.cached_tag_list_array.each do |tag| %>
+                  <span>#<%= tag %></span>
+                <% end %>
+              </div>
+            </a>
+          </div>
+        <% end %>
+      <% end %>
     <% end %>
-    <% if 1 == 2 %>
-      <a class="primary-sticky-nav-element sticky-join-cta" href="/enter">
-        <img src="<%= asset_path "emoji/apple-fire.png"%>" /> Join the DEV Community
-      </a>
-    <% end %>
-
   <% end %>
 </div>

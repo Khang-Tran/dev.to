@@ -3,6 +3,9 @@
 .sidebar-additional{
   .widget{
     .widget-suggested-follows-container{
+      h4{
+        margin: 0;
+      }
       .widget-body{
         .widget-list-item__suggestions{
           .widget-list-item__close-button{
@@ -21,6 +24,7 @@
               padding: 5px 0px;
               font-size: 18px;
               color: $black;
+              color: var(--theme-color, $black);
               &:hover {
                 text-decoration: underline;
               }
